@@ -100,29 +100,29 @@ export const SpatialNodeCanvas: React.FC = () => {
   };
 
   return (
-    <div className="relative w-full rounded-2xl overflow-hidden border border-slate-800 shadow-2xl bg-[#060913] select-none text-slate-100 flex flex-col h-[750px]">
+    <div style={{ position: "relative", width: "100%", borderRadius: "16px", overflow: "hidden", border: "1px solid #1e293b", backgroundColor: "#060913", height: "750px", display: "flex", flexDirection: "column", userSelect: "none", color: "#f1f5f9" }}>
       {/* Top Floating Input Bar */}
-      <div className="absolute top-4 left-6 right-6 z-30 flex items-center justify-between pointer-events-none">
-        <div className="flex items-center gap-2 pointer-events-auto bg-[#0a0f1d]/90 backdrop-blur border border-slate-800 px-4 py-2 rounded-2xl shadow-lg">
-          <span className="text-[10px] font-mono font-bold text-cyan-400 uppercase tracking-wider bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/40">
+      <div style={{ position: "absolute", top: "16px", left: "24px", right: "24px", zIndex: 30, display: "flex", alignItems: "center", justifyContent: "space-between", pointerEvents: "none" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", pointerEvents: "auto", backgroundColor: "rgba(10, 15, 29, 0.92)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid #1e293b", padding: "8px 16px", borderRadius: "12px", boxShadow: "0 10px 25px rgba(0,0,0,0.5)" }}>
+          <span style={{ fontSize: "10px", fontFamily: "monospace", fontWeight: "bold", color: "#38bdf8", textTransform: "uppercase", letterSpacing: "0.08em", backgroundColor: "rgba(8, 47, 73, 0.6)", padding: "2px 8px", borderRadius: "4px", border: "1px solid rgba(14, 116, 144, 0.4)" }}>
             Spatial Canvas
           </span>
-          <span className="text-xs font-semibold text-white">Narrativ Node Pipeline</span>
+          <span style={{ fontSize: "12px", fontWeight: 600, color: "#ffffff" }}>Narrativ Node Pipeline</span>
         </div>
 
-        <div className="flex items-center gap-2 pointer-events-auto bg-[#0a0f1d]/90 backdrop-blur border border-slate-800 p-1.5 rounded-2xl shadow-lg">
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", pointerEvents: "auto", backgroundColor: "rgba(10, 15, 29, 0.92)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid #1e293b", padding: "6px 8px", borderRadius: "12px", boxShadow: "0 10px 25px rgba(0,0,0,0.5)" }}>
           <input
             type="text"
             value={youtubeUrl}
             onChange={(e) => setYoutubeUrl(e.target.value)}
             placeholder="Paste YouTube or Raw Video URL..."
-            className="w-72 bg-[#05070f] border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-cyan-500"
+            style={{ width: "280px", backgroundColor: "#05070f", border: "1px solid #1e293b", borderRadius: "8px", padding: "6px 12px", fontSize: "12px", color: "#e2e8f0", fontFamily: "monospace", outline: "none" }}
           />
           <button 
             type="button"
-            className="px-3.5 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-md shadow-cyan-600/30"
+            style={{ padding: "6px 14px", backgroundColor: "#0284c7", color: "#ffffff", fontWeight: 600, border: "none", borderRadius: "8px", fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "6px", cursor: "pointer", transition: "background 0.15s ease", boxShadow: "0 2px 8px rgba(2, 132, 199, 0.4)" }}
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus style={{ width: 14, height: 14 }} />
             <span>Add Node</span>
           </button>
         </div>
