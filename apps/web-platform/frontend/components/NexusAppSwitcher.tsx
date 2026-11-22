@@ -55,7 +55,7 @@ const NEXUS_APPS: AppInfo[] = [
     name: "Cognix Nexus",
     subtitle: "Second Brain & Knowledge Graph",
     localUrl: "http://localhost:3001",
-    prodUrl: "https://cognix-nexus-frontend.onrender.com",
+    prodUrl: "https://cognix-nexus.vercel.app",
     icon: "🧠",
     color: "#ec4899",
   },
