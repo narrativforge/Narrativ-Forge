@@ -4,28 +4,47 @@ import { ReactNode, useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { api } from "../lib/api";
 
+// In-memory cache to prevent blocking and flickering across intra-app page navigations
+let cachedAuthenticated = false;
+let lastAuthCheckTime = 0;
+const AUTH_CACHE_TTL_MS = 60000; // 1 minute cache
+
 export function AuthGuard({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [state, setState] = useState<"checking" | "authenticated" | "error">("checking");
+  const [state, setState] = useState<"checking" | "authenticated" | "error">(
+    cachedAuthenticated ? "authenticated" : "checking"
+  );
 
   useEffect(() => {
     let active = true;
+    const now = Date.now();
 
-    // Timeout safety: fail-closed after 1200ms if auth check has not resolved
+    // If verified within the last minute, skip full blocking screen
+    if (cachedAuthenticated && now - lastAuthCheckTime < AUTH_CACHE_TTL_MS) {
+      if (state !== "authenticated") setState("authenticated");
+      return;
+    }
+
+    // Generous safety timeout: 10s instead of premature 1.2s to prevent false logouts on cloud latency
     const timer = setTimeout(() => {
       if (active && state === "checking") {
+        cachedAuthenticated = false;
         setState("error");
         router.replace("/login");
       }
-    }, 1200);
+    }, 10000);
 
     api.me()
       .then(() => {
-        if (active) setState("authenticated");
-      })
-      .catch(() => {
         if (!active) return;
+        cachedAuthenticated = true;
+        lastAuthCheckTime = Date.now();
+        setState("authenticated");
+      })
+      .catch((err) => {
+        if (!active) return;
+        cachedAuthenticated = false;
         setState("error");
         router.replace("/login");
       })
@@ -62,11 +81,11 @@ export function AuthGuard({ children }: { children: ReactNode }) {
               margin: "0 auto 16px",
               borderRadius: "50%",
               border: "3px solid #26323d",
-              borderTopColor: "#d8ff4f",
+              borderTopColor: "#38bdf8",
               animation: "spin 0.8s linear infinite",
             }}
           />
-          <div style={{ fontSize: "11px", fontWeight: 800, letterSpacing: "0.15em", color: "#d8ff4f", textTransform: "uppercase" }}>
+          <div style={{ fontSize: "11px", fontWeight: 800, letterSpacing: "0.15em", color: "#38bdf8", textTransform: "uppercase" }}>
             WORKSPACE SESSION
           </div>
           <h2 style={{ fontSize: "18px", fontWeight: 700, color: "#f4f7f8", margin: "8px 0 4px" }}>
