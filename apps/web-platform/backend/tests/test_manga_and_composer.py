@@ -119,6 +119,57 @@ def test_manga_and_video_composer_authorized_routes():
         })
         assert imported.status_code == 200
         assert imported.json()["clip"]["provider"] == "kling_ai"
+
+        # Travel Reel endpoints test
+        presets = client.get("/api/v1/video-composer/travel-presets")
+        assert presets.status_code == 200
+        presets_data = presets.json()
+        assert len(presets_data["themes"]) >= 4
+        assert len(presets_data["color_grades"]) >= 5
+
+        reel_payload = {
+            "raw_clips": [
+                {"title": "Sunset Pagoda", "source_url": "https://example.test/sunset.mp4", "duration_seconds": 6.0},
+                {"title": "Hot Air Balloon Flight", "source_url": "https://example.test/balloon.mp4", "duration_seconds": 8.0},
+                {"title": "Old City Temple Gate", "source_url": "https://example.test/gate.mp4", "duration_seconds": 5.5},
+            ],
+            "location_badge": "Bagan, Myanmar",
+            "theme_id": "epic_adventure",
+            "color_grade_id": "teal_and_orange",
+            "target_duration_seconds": 15.0,
+            "enable_speed_ramps": True,
+        }
+        reel_res = client.post("/api/v1/video-composer/travel-reel", json=reel_payload)
+        assert reel_res.status_code == 200
+        reel_data = reel_res.json()
+        assert reel_data["status"] == "success"
+        assert reel_data["timeline"]["travel_metadata"]["location_badge"] == "Bagan, Myanmar"
+        assert len(reel_data["timeline"]["tracks"]["video"]) == 3
+        assert "ffmpeg" in reel_data["timeline"]["ffmpeg_command"]
     finally:
         app.dependency_overrides.clear()
         app.dependency_overrides.update(original_overrides)
+
+
+def test_video_composer_travel_reel_service():
+    """Unit test for smart travel reel generation algorithm."""
+    clips = [
+        {"title": "Inle Lake Morning", "source_url": "inle.mp4", "duration_seconds": 7.0},
+        {"title": "Floating Gardens", "source_url": "gardens.mp4", "duration_seconds": 9.0},
+    ]
+    timeline = VideoComposerService.generate_smart_travel_reel(
+        raw_clips=clips,
+        location_badge="Inle Lake, Shan State",
+        theme_id="lofi_sunset",
+        color_grade_id="golden_hour",
+        target_duration_seconds=15.0,
+        enable_speed_ramps=True,
+    )
+    assert timeline["title"] == "Travel Reel - Inle Lake, Shan State"
+    assert timeline["travel_metadata"]["bpm"] == 85
+    assert timeline["travel_metadata"]["color_grade"] == "Golden Hour"
+    assert len(timeline["tracks"]["video"]) == 2
+    # Check speed factor alternation
+    assert timeline["tracks"]["video"][0]["speed_factor"] == 1.35
+    assert timeline["tracks"]["video"][1]["speed_factor"] == 0.65
+

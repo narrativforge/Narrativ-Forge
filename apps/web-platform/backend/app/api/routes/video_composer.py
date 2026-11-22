@@ -117,3 +117,43 @@ def generate_ffmpeg_spec(
         "ffmpeg_command": cmd,
         "clips_count": len(payload.video_clips),
     }
+
+
+class TravelReelRequest(BaseModel):
+    raw_clips: List[Dict[str, Any]] = Field(min_length=1)
+    location_badge: str = Field(default="Bagan, Myanmar", min_length=1, max_length=100)
+    theme_id: str = Field(default="epic_adventure")
+    color_grade_id: str = Field(default="teal_and_orange")
+    target_duration_seconds: float = Field(default=30.0, ge=5.0, le=120.0)
+    enable_speed_ramps: bool = Field(default=True)
+
+
+@router.get("/travel-presets")
+def get_travel_presets():
+    """Return available travel music themes and cinematic color grading presets."""
+    return VideoComposerService.get_travel_presets()
+
+
+@router.post("/travel-reel")
+def create_smart_travel_reel(
+    payload: TravelReelRequest,
+    _=Depends(require_roles("owner", "editor")),
+):
+    """Auto-compose raw footage into a beat-synced, color-graded 9:16 travel reel."""
+    try:
+        timeline = VideoComposerService.generate_smart_travel_reel(
+            raw_clips=payload.raw_clips,
+            location_badge=payload.location_badge,
+            theme_id=payload.theme_id,
+            color_grade_id=payload.color_grade_id,
+            target_duration_seconds=payload.target_duration_seconds,
+            enable_speed_ramps=payload.enable_speed_ramps,
+        )
+        return {
+            "status": "success",
+            "reel_title": timeline["title"],
+            "timeline": timeline,
+        }
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+

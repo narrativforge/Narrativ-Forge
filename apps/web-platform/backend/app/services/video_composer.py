@@ -218,3 +218,195 @@ class VideoComposerService:
                 "video_codec": "libx264",
             },
         }
+
+    TRAVEL_THEMES = {
+        "lofi_sunset": {
+            "name": "Lo-Fi Sunset Chill",
+            "bpm": 85,
+            "beat_interval": 0.71,
+            "vibe": "Dreamy & Warm",
+            "default_bgm_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/lofi_sunset.mp3",
+            "recommended_color": "golden_hour",
+        },
+        "epic_adventure": {
+            "name": "Epic Cinematic Wanderlust",
+            "bpm": 120,
+            "beat_interval": 0.50,
+            "vibe": "Majestic & Grand",
+            "default_bgm_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/epic_travel.mp3",
+            "recommended_color": "teal_and_orange",
+        },
+        "tropical_breeze": {
+            "name": "Tropical Island Breeze",
+            "bpm": 104,
+            "beat_interval": 0.58,
+            "vibe": "Sunny & Upbeat",
+            "default_bgm_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/tropical.mp3",
+            "recommended_color": "vibrant_paradise",
+        },
+        "velocity_cyber": {
+            "name": "Fast City Velocity",
+            "bpm": 130,
+            "beat_interval": 0.46,
+            "vibe": "Modern & High Energy",
+            "default_bgm_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/velocity.mp3",
+            "recommended_color": "cinematic_moody",
+        },
+    }
+
+    COLOR_PRESETS = {
+        "teal_and_orange": {
+            "name": "Teal & Orange",
+            "description": "Blockbuster contrast with cyan shadows and warm skin tones",
+            "ffmpeg_filter": "colorbalance=rs=0.08:gs=-0.02:bs=-0.08:rm=-0.05:gm=0.02:bm=0.08,eq=contrast=1.12:saturation=1.2",
+        },
+        "golden_hour": {
+            "name": "Golden Hour",
+            "description": "Warm sunset glow and gentle highlight roll-off",
+            "ffmpeg_filter": "colorbalance=rs=0.14:gs=0.05:bs=-0.12,eq=contrast=1.08:saturation=1.15:gamma=1.04",
+        },
+        "vintage_film": {
+            "name": "35mm Vintage Film",
+            "description": "Kodak film aesthetic with lifted blacks and nostalgic tone",
+            "ffmpeg_filter": "curves=preset=vintage,eq=contrast=1.1:saturation=1.1",
+        },
+        "vibrant_paradise": {
+            "name": "Vibrant Paradise",
+            "description": "Deep sky blues, vivid emerald greens and crisp clarity",
+            "ffmpeg_filter": "eq=contrast=1.15:saturation=1.35:brightness=0.02",
+        },
+        "cinematic_moody": {
+            "name": "Cinematic Moody",
+            "description": "High contrast, crushed blacks and muted atmospheric tones",
+            "ffmpeg_filter": "eq=contrast=1.25:saturation=0.88:brightness=-0.04",
+        },
+    }
+
+    @classmethod
+    def get_travel_presets(cls) -> Dict[str, Any]:
+        """Return available music themes and cinematic color grade presets."""
+        return {
+            "themes": [
+                {"id": k, **v} for k, v in cls.TRAVEL_THEMES.items()
+            ],
+            "color_grades": [
+                {"id": k, **v} for k, v in cls.COLOR_PRESETS.items()
+            ],
+        }
+
+    @classmethod
+    def generate_smart_travel_reel(
+        cls,
+        raw_clips: List[Dict[str, Any]],
+        location_badge: str = "Bagan, Myanmar",
+        theme_id: str = "epic_adventure",
+        color_grade_id: str = "teal_and_orange",
+        target_duration_seconds: float = 30.0,
+        enable_speed_ramps: bool = True,
+    ) -> Dict[str, Any]:
+        """Auto-compose raw travel footage into a beat-synced 9:16 cinematic reel."""
+        if not raw_clips:
+            raise ValueError("At least one raw video clip is required to generate a travel reel")
+
+        theme = cls.TRAVEL_THEMES.get(theme_id, cls.TRAVEL_THEMES["epic_adventure"])
+        color_preset = cls.COLOR_PRESETS.get(color_grade_id, cls.COLOR_PRESETS["teal_and_orange"])
+        beat_interval = theme["beat_interval"]
+        bar_duration = round(beat_interval * 4, 2)  # 4-beat bar
+
+        # Calculate optimal slice per clip to hit target duration
+        num_clips = len(raw_clips)
+        target_per_clip = max(target_duration_seconds / num_clips, bar_duration)
+
+        composed_clips = []
+        transitions = [
+            TransitionType.CUT,
+            TransitionType.WHIP_PAN,
+            TransitionType.CROSS_DISSOLVE,
+            TransitionType.ANIME_FLASH,
+        ]
+
+        current_time = 0.0
+        for i, clip in enumerate(raw_clips):
+            clip_title = clip.get("title", f"Scene {i+1}")
+            source_url = clip.get("source_url", "")
+            raw_duration = float(clip.get("duration_seconds", target_per_clip))
+
+            # Alternate speed ramping: 1.35x movement -> 0.65x slow-mo peak
+            speed = 1.0
+            if enable_speed_ramps:
+                speed = 0.65 if (i % 2 == 1) else 1.35
+
+            shot_duration = min(raw_duration, target_per_clip)
+            effective_duration = round(shot_duration / speed, 2)
+            transition = transitions[i % len(transitions)] if i > 0 else TransitionType.CUT
+
+            composed_clips.append({
+                "id": f"travel_shot_{i+1:02d}",
+                "title": clip_title,
+                "source_url": source_url,
+                "provider": VideoSourceProvider.LOCAL_UPLOAD.value,
+                "start_trim_seconds": float(clip.get("start_trim_seconds", 0.0)),
+                "duration_seconds": shot_duration,
+                "speed_factor": speed,
+                "transition_in": transition.value,
+                "transition_duration_seconds": 0.4 if transition != TransitionType.CUT else 0.0,
+                "color_filter": color_preset["ffmpeg_filter"],
+            })
+            current_time += effective_duration
+
+        total_reel_duration = round(current_time, 2)
+
+        # Generate animated title badge cue
+        title_badge = {
+            "text": location_badge,
+            "start_time_seconds": 0.5,
+            "duration_seconds": 3.5,
+            "style": {
+                "font_size": 42,
+                "font_color": "#ffffff",
+                "box_color": "rgba(0,0,0,0.55)",
+                "position": "bottom_center",
+                "animation": "fade_in_slide_up",
+            },
+        }
+
+        # Build base timeline
+        timeline = cls.build_timeline(
+            title=f"Travel Reel - {location_badge}",
+            video_clips=composed_clips,
+            bgm_track_url=theme["default_bgm_url"],
+            bgm_volume_percent=65.0,
+            subtitles=[title_badge],
+            target_aspect_ratio="9:16",
+        )
+
+        timeline["travel_metadata"] = {
+            "location_badge": location_badge,
+            "theme": theme["name"],
+            "bpm": theme["bpm"],
+            "color_grade": color_preset["name"],
+            "speed_ramps_enabled": enable_speed_ramps,
+            "total_shots": len(composed_clips),
+            "estimated_render_time_seconds": round(total_reel_duration * 0.4, 1),
+        }
+
+        # Generate complete FFmpeg execution script
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-f", "concat",
+            "-safe", "0",
+            "-i", "inputs.txt",
+            "-i", theme["default_bgm_url"],
+            "-vf", f"scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,{color_preset['ffmpeg_filter']}",
+            "-c:v", "libx264",
+            "-preset", "fast",
+            "-crf", "22",
+            "-c:a", "aac",
+            "-b:a", "192k",
+            "-shortest",
+            f"travel_reel_{uuid.uuid4().hex[:6]}.mp4",
+        ]
+        timeline["ffmpeg_command"] = " ".join(cmd)
+
+        return timeline
