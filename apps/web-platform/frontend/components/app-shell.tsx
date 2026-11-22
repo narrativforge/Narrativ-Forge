@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { AuthGuard } from "./auth-guard";
 import { NarrativLogo } from "./NarrativLogo";
+import { NexusAppSwitcher } from "./NexusAppSwitcher";
 
 const sections: { label: string; items: { label: string; href: string; icon: LucideIcon }[] }[] = [
   { label: "Workspace", items: [
@@ -149,6 +150,7 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
                 <span className="status-indicator" aria-hidden="true" />
                 <span>Telegram · Topic 6</span>
               </div>
+              <NexusAppSwitcher currentAppId="narrativ" />
               <Link className="avatar" href="/settings" aria-label="Open workspace settings">NF</Link>
             </div>
           </header>
