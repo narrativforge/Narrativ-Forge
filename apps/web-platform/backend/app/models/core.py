@@ -616,5 +616,7 @@ class CharacterRegistry(Base):
     vrm_model_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
     expression_map_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     character_meta_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    lora_tag: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    face_reference_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now, nullable=False)

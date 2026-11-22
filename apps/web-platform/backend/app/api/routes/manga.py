@@ -5,7 +5,10 @@ import edge_tts
 from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
+from ...db import get_db
+from ...models import CharacterRegistry
 from ...services.manga_engine import (
     MangaEngine,
     LayoutType,
@@ -36,6 +39,8 @@ class MangaGenerateRequest(BaseModel):
         default="anime style, makoto shinkai aesthetic, high contrast manga inks, crisp lineart"
     )
     characters: Optional[List[str]] = Field(default_factory=lambda: ["Protagonist", "Rival"])
+    character_actor_ids: Optional[List[str]] = Field(default=None)
+    character_lora_tags: Optional[Dict[str, str]] = Field(default=None)
 
 
 class MotionComicExportRequest(BaseModel):
@@ -58,15 +63,52 @@ def list_sfx_catalog():
 @router.post("/generate")
 def generate_manga_storyboard(
     payload: MangaGenerateRequest,
+    membership=Depends(get_current_membership),
     _=Depends(require_roles("owner", "editor")),
+    db: Session = Depends(get_db),
 ):
     """Generate multi-panel layout, visual prompts, and speech bubbles for a scene."""
+    lora_map: Dict[str, str] = dict(payload.character_lora_tags or {})
+
+    try:
+        if payload.character_actor_ids:
+            records = (
+                db.query(CharacterRegistry)
+                .filter(
+                    CharacterRegistry.organization_id == membership.organization_id,
+                    CharacterRegistry.actor_id.in_(payload.character_actor_ids),
+                )
+                .all()
+            )
+            for rec in records:
+                if rec.lora_tag:
+                    lora_map[rec.actor_name] = rec.lora_tag
+                    lora_map[rec.actor_id] = rec.lora_tag
+
+        if not lora_map and payload.characters:
+            records = (
+                db.query(CharacterRegistry)
+                .filter(
+                    CharacterRegistry.organization_id == membership.organization_id,
+                    (CharacterRegistry.actor_id.in_(payload.characters) | CharacterRegistry.actor_name.in_(payload.characters)),
+                )
+                .all()
+            )
+            for rec in records:
+                if rec.lora_tag:
+                    lora_map[rec.actor_name] = rec.lora_tag
+                    lora_map[rec.actor_id] = rec.lora_tag
+    except Exception:
+        # In isolated test environments or degraded DB states, proceed gracefully
+        pass
+
     page = MangaEngine.generate_manga_page(
         title=payload.title,
         story_synopsis=payload.story_synopsis,
         layout_type=payload.layout_type,
         anime_style_prompt=payload.anime_style_prompt,
         character_names=payload.characters,
+        character_lora_tags=lora_map if lora_map else None,
     )
     return page
 

@@ -164,10 +164,21 @@ class MangaEngine:
         layout_type: LayoutType = LayoutType.WEBTOON_VERTICAL,
         anime_style_prompt: str = "anime style, makoto shinkai aesthetic, high contrast manga inks, crisp lineart",
         character_names: Optional[List[str]] = None,
+        character_lora_tags: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
         """Generate panel breakdown, visual prompts, and speech bubble layouts for a story scene."""
         characters = character_names or ["Protagonist", "Rival"]
         panels: List[MangaPanel] = []
+
+        def _get_char_lora_prefix(speaker: Optional[str] = None) -> str:
+            if not character_lora_tags:
+                return ""
+            if speaker and speaker in character_lora_tags and character_lora_tags[speaker]:
+                return f"{character_lora_tags[speaker]}, "
+            tags = [v for v in character_lora_tags.values() if v]
+            if tags:
+                return ", ".join(tags) + ", "
+            return ""
 
         if layout_type == LayoutType.YONKOMA_4KOMA:
             stages = [
@@ -177,8 +188,10 @@ class MangaEngine:
                 ("4. Ketsu (結 - Punchline)", "Final resolution, punchline reaction or dramatic cliffhanger", 3),
             ]
             for idx, (stage_name, stage_desc, step) in enumerate(stages):
+                speaker_name = characters[idx % len(characters)]
+                lora_prefix = _get_char_lora_prefix(speaker_name)
                 prompt = (
-                    f"{stage_desc}, {story_synopsis}, {anime_style_prompt}, panel {idx + 1}"
+                    f"{lora_prefix}{stage_desc}, {story_synopsis}, {anime_style_prompt}, panel {idx + 1}"
                 )
                 bubble_text = f"Dialog for step {idx + 1}: {stage_name}"
                 bubbles = [
@@ -215,7 +228,8 @@ class MangaEngine:
 
         elif layout_type == LayoutType.CINEMATIC_SPLASH:
             # 3 Panels: 1 Huge Hero Panel + 2 Action Insets
-            p1_prompt = f"Grand heroic battle scene, {story_synopsis}, {anime_style_prompt}, masterpiece widescreen"
+            p1_lora = _get_char_lora_prefix(characters[0] if characters else None)
+            p1_prompt = f"{p1_lora}Grand heroic battle scene, {story_synopsis}, {anime_style_prompt}, masterpiece widescreen"
             panels.append(
                 MangaPanel(
                     panel_index=1,
@@ -241,7 +255,9 @@ class MangaEngine:
                     camera_cue={"action": "camera_shake_and_zoom", "duration_seconds": 4.0, "zoom_scale": 1.3},
                 )
             )
-            p2_prompt = f"Intense eye close up, {story_synopsis}, {anime_style_prompt}"
+            p2_speaker = characters[-1] if characters else None
+            p2_lora = _get_char_lora_prefix(p2_speaker)
+            p2_prompt = f"{p2_lora}Intense eye close up, {story_synopsis}, {anime_style_prompt}"
             panels.append(
                 MangaPanel(
                     panel_index=2,
@@ -266,7 +282,8 @@ class MangaEngine:
                     camera_cue={"action": "slow_pan_left", "duration_seconds": 2.5, "zoom_scale": 1.1},
                 )
             )
-            p3_prompt = f"Energy clash spark lines, high contrast manga ink, {anime_style_prompt}"
+            p3_lora = _get_char_lora_prefix()
+            p3_prompt = f"{p3_lora}Energy clash spark lines, high contrast manga ink, {anime_style_prompt}"
             panels.append(
                 MangaPanel(
                     panel_index=3,
@@ -293,7 +310,9 @@ class MangaEngine:
             ]
             for i, ptitle in enumerate(panel_titles):
                 is_climax = i == 2
-                wb_prompt = f"{ptitle}, {story_synopsis}, {anime_style_prompt}, vertical webtoon composition"
+                speaker_name = characters[i % len(characters)]
+                lora_prefix = _get_char_lora_prefix(speaker_name)
+                wb_prompt = f"{lora_prefix}{ptitle}, {story_synopsis}, {anime_style_prompt}, vertical webtoon composition"
                 panels.append(
                     MangaPanel(
                         panel_index=i + 1,
@@ -333,6 +352,7 @@ class MangaEngine:
             "estimated_video_duration_seconds": sum(
                 p.camera_cue.get("duration_seconds", 3.0) for p in panels
             ),
+            "character_lora_tags": character_lora_tags or {},
         }
 
     @classmethod

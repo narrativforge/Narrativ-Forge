@@ -25,6 +25,8 @@ class CharacterImportPayload(BaseModel):
     vrm_model_path: Optional[str] = Field(default=None, max_length=500)
     expression_map: Optional[Dict[str, str]] = None
     character_meta: Optional[Dict[str, Any]] = None
+    lora_tag: Optional[str] = Field(default=None, max_length=300)
+    face_reference_url: Optional[str] = Field(default=None, max_length=1000)
 
 
 class CharacterImportBatch(BaseModel):
@@ -51,6 +53,8 @@ def _serialize_character(record: CharacterRegistry) -> Dict[str, Any]:
         "vrm_model_path": record.vrm_model_path,
         "expression_map": _decode_json(record.expression_map_json, None),
         "character_meta": _decode_json(record.character_meta_json, None),
+        "lora_tag": record.lora_tag,
+        "face_reference_url": record.face_reference_url,
         "created_at": record.created_at.isoformat() if record.created_at else None,
         "updated_at": record.updated_at.isoformat() if record.updated_at else None,
     }
@@ -92,6 +96,8 @@ def _import_manual_pack(
         vrm_model_path=payload.vrm_model_path,
         expression_map_json=json.dumps(payload.expression_map, ensure_ascii=False) if payload.expression_map is not None else None,
         character_meta_json=json.dumps(payload.character_meta, ensure_ascii=False) if payload.character_meta is not None else None,
+        lora_tag=payload.lora_tag,
+        face_reference_url=payload.face_reference_url,
     ))
     db.flush()
     seen_actor_ids.add(payload.actor_id)
