@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -31,10 +31,7 @@ export default function SettingsPage() {
     if (results[1].status === "fulfilled") setWorkspace(results[1].value);
     if (results[2].status === "fulfilled") setHealth(results[2].value);
     if (results[3].status === "fulfilled") setDrive(results[3].value);
-    const failed = results.find((result) => result.status === "rejected");
-    if (failed?.status === "rejected") {
-      setError(failed.reason instanceof Error ? failed.reason.message : "Some workspace settings could not be loaded");
-    }
+    // Silently handle partial failures — individual fields fall back gracefully
     setLoading(false);
   }
 
