@@ -198,6 +198,11 @@ def root() -> dict[str, str]:
     return {"service": "narrativ-forge-api", "status": "ok"}
 
 
+@app.get("/health")
+def health() -> dict[str, str]:
+    return {"status": "ok", "service": "narrativ-forge-api"}
+
+
 # =============================================================================
 # Global Error Handler → Telegram Alert
 # =============================================================================
