@@ -27,6 +27,8 @@ import {
   Clock,
   ArrowRight,
   Network,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 
 interface VideoClipItem {
@@ -67,30 +69,27 @@ export default function VideoComposerPage() {
       id: "clip_01",
       title: "Kling AI - Neo Bagan Cyberpunk Flight",
       provider: "kling_ai",
-      duration_seconds: 6.0,
-      source_url: "https://storage.googleapis.com/sample/kling_clip1.mp4",
+      duration_seconds: 16.6,
+      source_url: "/sample_videos/clip1.mp4",
       transition: "cross_dissolve",
-      poster_url: "https://image.pollinations.ai/prompt/Dawn%20breaks%20over%20futuristic%20Bagan%20temples%2C%20mist%20rising%2C%20cyberpunk%20flying%20airship%2C%20anime%20style%2C%208k%20crisp%20lineart?width=720&height=1280&model=flux&nologo=true",
       subtitle: "The ancient seal is awakening beneath the sacred pagoda...",
     },
     {
       id: "clip_02",
       title: "Runway Gen-3 - Mech Awakening Close-Up",
       provider: "runway_gen3",
-      duration_seconds: 4.5,
-      source_url: "https://storage.googleapis.com/sample/runway_clip2.mp4",
+      duration_seconds: 18.4,
+      source_url: "/sample_videos/clip2.mp4",
       transition: "cut",
-      poster_url: "https://image.pollinations.ai/prompt/Giant%20anime%20mech%20eye%20glows%20with%20neon%20cyan%20energy%2C%20anime%20lineart%2C%20high%20contrast%2C%20masterpiece?width=720&height=1280&model=flux&nologo=true",
       subtitle: "Awaken, Unit-01! The sky sanctuary needs your blade!",
     },
     {
       id: "clip_03",
       title: "Luma Dream Machine - Solar Flare Blast",
       provider: "luma_dream_machine",
-      duration_seconds: 5.0,
-      source_url: "https://storage.googleapis.com/sample/luma_clip3.mp4",
+      duration_seconds: 33.3,
+      source_url: "/sample_videos/clip3.mp4",
       transition: "anime_flash",
-      poster_url: "https://image.pollinations.ai/prompt/Shadow%20beast%20emerges%20from%20dimensional%20tear%2C%20solar%20flare%20speed%20lines%2C%20dramatic%20shadows%2C%20anime%20masterpiece?width=720&height=1280&model=flux&nologo=true",
       subtitle: "Warning: Celestial solar core threshold exceeded! Full release!",
     },
   ]);
@@ -115,7 +114,7 @@ export default function VideoComposerPage() {
   const [newUrl, setNewUrl] = useState("");
   const [newTitle, setNewTitle] = useState("");
   const [newProvider, setNewProvider] = useState("kling_ai");
-  const [newDuration, setNewDuration] = useState("5.0");
+  const [newDuration, setNewDuration] = useState("15.0");
   const [bgmVolume, setBgmVolume] = useState(25);
 
   // Playback Monitor State
@@ -127,6 +126,8 @@ export default function VideoComposerPage() {
   const [compileStatus, setCompileStatus] = useState("");
   const [renderJobs, setRenderJobs] = useState<LocalRenderJob[]>([]);
   const queueImportRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isMuted, setIsMuted] = useState(true);
 
   const totalDuration = activeTab === "travel_reel"
     ? targetDuration
@@ -166,6 +167,7 @@ export default function VideoComposerPage() {
         setCurrentTime((prev) => {
           if (prev >= totalDuration) {
             setIsPlaying(false);
+            if (videoRef.current) videoRef.current.currentTime = 0;
             return 0.0;
           }
           return Math.round((prev + 0.1) * 10) / 10;
@@ -179,14 +181,44 @@ export default function VideoComposerPage() {
 
   // Find active clip for Storyboard
   let accumulatedTime = 0;
-  let activeClip = clips[0];
-  for (const c of clips) {
-    if (currentTime >= accumulatedTime && currentTime <= accumulatedTime + c.duration_seconds) {
-      activeClip = c;
+  let activeClipIndex = 0;
+  for (let i = 0; i < clips.length; i++) {
+    const c = clips[i];
+    if (currentTime >= accumulatedTime && currentTime < accumulatedTime + c.duration_seconds) {
+      activeClipIndex = i;
       break;
     }
     accumulatedTime += c.duration_seconds;
+    if (i === clips.length - 1) {
+      activeClipIndex = clips.length - 1;
+    }
   }
+  const activeClip = clips[activeClipIndex] || clips[0];
+
+  let startOfActiveClip = 0;
+  for (let i = 0; i < activeClipIndex; i++) {
+    startOfActiveClip += clips[i].duration_seconds;
+  }
+  const clipLocalTime = Math.max(0, currentTime - startOfActiveClip);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.play().catch(() => {});
+      } else {
+        videoRef.current.pause();
+      }
+    }
+  }, [isPlaying, activeClip?.id]);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      const diff = Math.abs(videoRef.current.currentTime - clipLocalTime);
+      if (diff > 0.5) {
+        videoRef.current.currentTime = clipLocalTime;
+      }
+    }
+  }, [clipLocalTime]);
 
   const handleAddClip = () => {
     if (!newUrl.trim() || !newTitle.trim()) return;
@@ -194,7 +226,7 @@ export default function VideoComposerPage() {
       id: `clip_${Date.now()}`,
       title: newTitle,
       provider: newProvider,
-      duration_seconds: parseFloat(newDuration) || 5.0,
+      duration_seconds: parseFloat(newDuration) || 15.0,
       source_url: newUrl,
       transition: "cut",
     };
@@ -696,12 +728,9 @@ export default function VideoComposerPage() {
                 {/* 9:16 Video Player Screen */}
                 <div
                   style={{
-                    height: "440px",
+                    height: "460px",
                     borderRadius: "14px",
                     backgroundColor: "#05070d",
-                    backgroundImage: activeClip?.poster_url ? `linear-gradient(180deg, rgba(5, 7, 13, 0.4) 0%, rgba(5, 7, 13, 0.75) 100%), url("${activeClip.poster_url}")` : "none",
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
                     border: isPlaying ? "2px solid #38bdf8" : "2px solid #1e293b",
                     position: "relative",
                     overflow: "hidden",
@@ -713,29 +742,100 @@ export default function VideoComposerPage() {
                     transition: "all 0.4s ease",
                   }}
                 >
-                  {/* Top Bar with Live Indicator */}
+                  {/* Real HTML5 Video Element */}
+                  <video
+                    ref={videoRef}
+                    key={activeClip?.source_url}
+                    src={activeClip?.source_url}
+                    playsInline
+                    loop
+                    muted={isMuted}
+                    autoPlay={isPlaying}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      zIndex: 1,
+                    }}
+                  />
+
+                  {/* Dark gradient overlay for text readability */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      background: "linear-gradient(180deg, rgba(5,7,13,0.5) 0%, rgba(5,7,13,0.1) 40%, rgba(5,7,13,0.75) 100%)",
+                      pointerEvents: "none",
+                      zIndex: 2,
+                    }}
+                  />
+
+                  {/* Top Bar with Live Indicator & Audio Toggle */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 10 }}>
                     <span style={{ fontSize: "10px", fontWeight: 700, padding: "3px 10px", borderRadius: "6px", backgroundColor: isPlaying ? "#38bdf8" : "#1e293b", color: isPlaying ? "#000" : "#94a3b8", display: "inline-flex", alignItems: "center", gap: "5px" }}>
                       {isPlaying && <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#0284c7", display: "inline-block" }} />}
                       9:16 SHORTS PREVIEW
                     </span>
-                    <span style={{ fontSize: "11px", color: "#f8fafc", textTransform: "uppercase", fontWeight: 700, textShadow: "0 2px 4px rgba(0,0,0,0.8)", backgroundColor: "rgba(0,0,0,0.6)", padding: "2px 8px", borderRadius: "4px" }}>
-                      {activeClip ? activeClip.provider.replace("_", " ") : "READY"}
-                    </span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <button
+                        type="button"
+                        onClick={() => setIsMuted(!isMuted)}
+                        title={isMuted ? "Unmute Audio" : "Mute Audio"}
+                        style={{
+                          background: "rgba(0,0,0,0.6)",
+                          border: "1px solid rgba(255,255,255,0.2)",
+                          borderRadius: "4px",
+                          padding: "3px 6px",
+                          color: isMuted ? "#94a3b8" : "#38bdf8",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          fontSize: "10px",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {isMuted ? <VolumeX size={12} /> : <Volume2 size={12} />}
+                        <span>{isMuted ? "MUTED" : "SOUND ON"}</span>
+                      </button>
+                      <span style={{ fontSize: "11px", color: "#f8fafc", textTransform: "uppercase", fontWeight: 700, textShadow: "0 2px 4px rgba(0,0,0,0.8)", backgroundColor: "rgba(0,0,0,0.6)", padding: "2px 8px", borderRadius: "4px" }}>
+                        {activeClip ? activeClip.provider.replace("_", " ") : "READY"}
+                      </span>
+                    </div>
                   </div>
 
-                  {/* Center Motion Status & Title */}
+                  {/* Center Motion Status & Play Action */}
                   <div style={{ textAlign: "center", zIndex: 10, margin: "auto 0" }}>
-                    <div style={{ display: "flex", justifyContent: "center", marginBottom: "10px" }}>
-                      <div style={{ padding: "12px", borderRadius: "50%", backgroundColor: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)", border: "1px solid rgba(255,255,255,0.15)" }}>
-                        {isPlaying ? <Film size={32} style={{ color: "#38bdf8" }} /> : <Pause size={32} style={{ color: "#94a3b8" }} />}
+                    {!isPlaying && (
+                      <div style={{ display: "flex", justifyContent: "center", marginBottom: "12px" }}>
+                        <button
+                          type="button"
+                          onClick={() => setIsPlaying(true)}
+                          style={{
+                            padding: "16px",
+                            borderRadius: "50%",
+                            backgroundColor: "rgba(0,0,0,0.75)",
+                            backdropFilter: "blur(8px)",
+                            border: "2px solid #38bdf8",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            boxShadow: "0 0 20px rgba(56, 189, 248, 0.4)",
+                            transition: "all 0.2s ease",
+                          }}
+                        >
+                          <Play size={36} style={{ color: "#38bdf8", marginLeft: "4px" }} />
+                        </button>
                       </div>
-                    </div>
-                    <div style={{ fontSize: "14px", fontWeight: 800, color: "#ffffff", textShadow: "0 2px 8px rgba(0,0,0,0.9)" }}>
+                    )}
+                    <div style={{ fontSize: "15px", fontWeight: 800, color: "#ffffff", textShadow: "0 2px 8px rgba(0,0,0,0.9)" }}>
                       {activeClip ? activeClip.title : "Timeline Idle"}
                     </div>
                     <div style={{ fontSize: "11px", color: "#38bdf8", marginTop: "4px", fontWeight: 600, textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}>
-                      Active Transition: <span style={{ color: "#c084fc", textTransform: "uppercase" }}>{activeClip?.transition || "cut"}</span>
+                      Clip: <span style={{ color: "#f8fafc" }}>{activeClipIndex + 1}/{clips.length}</span> · Transition: <span style={{ color: "#c084fc", textTransform: "uppercase" }}>{activeClip?.transition || "cut"}</span>
                     </div>
                   </div>
 
@@ -781,7 +881,11 @@ export default function VideoComposerPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => { setIsPlaying(false); setCurrentTime(0.0); }}
+                        onClick={() => {
+                          setIsPlaying(false);
+                          setCurrentTime(0.0);
+                          if (videoRef.current) videoRef.current.currentTime = 0;
+                        }}
                         className="ds-button"
                         style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
                       >
@@ -789,13 +893,34 @@ export default function VideoComposerPage() {
                       </button>
                     </div>
 
-                    <div style={{ marginTop: "24px" }}>
+                    {/* Timeline Scrubber Slider */}
+                    <div style={{ marginTop: "16px", backgroundColor: "#0b1424", padding: "12px", borderRadius: "8px", border: "1px solid #1e293b" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#94a3b8", marginBottom: "6px" }}>
+                        <span>Timeline Scrubber</span>
+                        <span style={{ color: "#38bdf8", fontWeight: 700 }}>{currentTime.toFixed(1)}s / {totalDuration.toFixed(1)}s</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max={totalDuration}
+                        step="0.1"
+                        value={currentTime}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          setCurrentTime(val);
+                        }}
+                        style={{ width: "100%", accentColor: "#38bdf8", cursor: "pointer" }}
+                      />
+                    </div>
+
+                    <div style={{ marginTop: "16px" }}>
                       <div style={{ fontSize: "12px", color: "#94a3b8", marginBottom: "6px" }}>Active Clip Inspector:</div>
                       {activeClip && (
                         <div style={{ backgroundColor: "#0b1424", padding: "12px", borderRadius: "8px", border: "1px solid #1e293b", fontSize: "12px", color: "#e2e8f0" }}>
                           <div><b>Title:</b> {activeClip.title}</div>
                           <div><b>Source:</b> {activeClip.provider.toUpperCase()}</div>
-                          <div><b>Duration:</b> {activeClip.duration_seconds}s</div>
+                          <div><b>Duration:</b> {activeClip.duration_seconds}s (Total: {totalDuration.toFixed(1)}s)</div>
+                          <div><b>Source Clip:</b> {activeClip.source_url}</div>
                           <div><b>Transition In:</b> {activeClip.transition}</div>
                         </div>
                       )}
@@ -913,8 +1038,14 @@ export default function VideoComposerPage() {
                     {clips.map((c, i) => (
                       <div
                         key={c.id}
+                        onClick={() => {
+                          let startT = 0;
+                          for (let j = 0; j < i; j++) startT += clips[j].duration_seconds;
+                          setCurrentTime(startT);
+                        }}
                         style={{
-                          flex: `0 0 ${Math.max(c.duration_seconds * 28, 140)}px`,
+                          flex: `0 0 ${Math.max(c.duration_seconds * 14, 180)}px`,
+                          cursor: "pointer",
                           padding: "10px",
                           borderRadius: "8px",
                           backgroundColor: activeClip?.id === c.id ? "#1e3a5f" : "#1e293b",
