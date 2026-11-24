@@ -36,6 +36,8 @@ interface VideoClipItem {
   duration_seconds: number;
   source_url: string;
   transition: string;
+  poster_url?: string;
+  subtitle?: string;
 }
 
 type LocalRenderJob = { id: string; title: string; createdAt: string; duration: number; status: "planned" | "ready"; command: string };
@@ -68,6 +70,8 @@ export default function VideoComposerPage() {
       duration_seconds: 6.0,
       source_url: "https://storage.googleapis.com/sample/kling_clip1.mp4",
       transition: "cross_dissolve",
+      poster_url: "https://image.pollinations.ai/prompt/Dawn%20breaks%20over%20futuristic%20Bagan%20temples%2C%20mist%20rising%2C%20cyberpunk%20flying%20airship%2C%20anime%20style%2C%208k%20crisp%20lineart?width=720&height=1280&model=flux&nologo=true",
+      subtitle: "The ancient seal is awakening beneath the sacred pagoda...",
     },
     {
       id: "clip_02",
@@ -76,6 +80,8 @@ export default function VideoComposerPage() {
       duration_seconds: 4.5,
       source_url: "https://storage.googleapis.com/sample/runway_clip2.mp4",
       transition: "cut",
+      poster_url: "https://image.pollinations.ai/prompt/Giant%20anime%20mech%20eye%20glows%20with%20neon%20cyan%20energy%2C%20anime%20lineart%2C%20high%20contrast%2C%20masterpiece?width=720&height=1280&model=flux&nologo=true",
+      subtitle: "Awaken, Unit-01! The sky sanctuary needs your blade!",
     },
     {
       id: "clip_03",
@@ -84,6 +90,8 @@ export default function VideoComposerPage() {
       duration_seconds: 5.0,
       source_url: "https://storage.googleapis.com/sample/luma_clip3.mp4",
       transition: "anime_flash",
+      poster_url: "https://image.pollinations.ai/prompt/Shadow%20beast%20emerges%20from%20dimensional%20tear%2C%20solar%20flare%20speed%20lines%2C%20dramatic%20shadows%2C%20anime%20masterpiece?width=720&height=1280&model=flux&nologo=true",
+      subtitle: "Warning: Celestial solar core threshold exceeded! Full release!",
     },
   ]);
 
@@ -688,55 +696,68 @@ export default function VideoComposerPage() {
                 {/* 9:16 Video Player Screen */}
                 <div
                   style={{
-                    height: "380px",
-                    borderRadius: "12px",
+                    height: "440px",
+                    borderRadius: "14px",
                     backgroundColor: "#05070d",
-                    border: "2px solid #1e293b",
+                    backgroundImage: activeClip?.poster_url ? `linear-gradient(180deg, rgba(5, 7, 13, 0.4) 0%, rgba(5, 7, 13, 0.75) 100%), url("${activeClip.poster_url}")` : "none",
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    border: isPlaying ? "2px solid #38bdf8" : "2px solid #1e293b",
                     position: "relative",
                     overflow: "hidden",
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
                     padding: "16px",
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.7)",
+                    boxShadow: isPlaying ? "0 0 30px rgba(56, 189, 248, 0.25)" : "0 8px 32px rgba(0,0,0,0.7)",
+                    transition: "all 0.4s ease",
                   }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: "10px", fontWeight: 700, padding: "2px 8px", borderRadius: "4px", backgroundColor: "#38bdf8", color: "#000" }}>
+                  {/* Top Bar with Live Indicator */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 10 }}>
+                    <span style={{ fontSize: "10px", fontWeight: 700, padding: "3px 10px", borderRadius: "6px", backgroundColor: isPlaying ? "#38bdf8" : "#1e293b", color: isPlaying ? "#000" : "#94a3b8", display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                      {isPlaying && <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#0284c7", display: "inline-block" }} />}
                       9:16 SHORTS PREVIEW
                     </span>
-                    <span style={{ fontSize: "11px", color: "#94a3b8", textTransform: "uppercase" }}>
+                    <span style={{ fontSize: "11px", color: "#f8fafc", textTransform: "uppercase", fontWeight: 700, textShadow: "0 2px 4px rgba(0,0,0,0.8)", backgroundColor: "rgba(0,0,0,0.6)", padding: "2px 8px", borderRadius: "4px" }}>
                       {activeClip ? activeClip.provider.replace("_", " ") : "READY"}
                     </span>
                   </div>
 
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ display: "flex", justifyContent: "center", marginBottom: "8px" }}>
-                      {isPlaying ? <Film size={36} style={{ color: "#38bdf8" }} /> : <Pause size={36} style={{ color: "#64748b" }} />}
+                  {/* Center Motion Status & Title */}
+                  <div style={{ textAlign: "center", zIndex: 10, margin: "auto 0" }}>
+                    <div style={{ display: "flex", justifyContent: "center", marginBottom: "10px" }}>
+                      <div style={{ padding: "12px", borderRadius: "50%", backgroundColor: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)", border: "1px solid rgba(255,255,255,0.15)" }}>
+                        {isPlaying ? <Film size={32} style={{ color: "#38bdf8" }} /> : <Pause size={32} style={{ color: "#94a3b8" }} />}
+                      </div>
                     </div>
-                    <div style={{ fontSize: "13px", fontWeight: 700, color: "#f8fafc" }}>
+                    <div style={{ fontSize: "14px", fontWeight: 800, color: "#ffffff", textShadow: "0 2px 8px rgba(0,0,0,0.9)" }}>
                       {activeClip ? activeClip.title : "Timeline Idle"}
                     </div>
-                    <div style={{ fontSize: "11px", color: "#64748b", marginTop: "4px" }}>
-                      Active Transition: <span style={{ color: "#c084fc" }}>{activeClip?.transition || "cut"}</span>
+                    <div style={{ fontSize: "11px", color: "#38bdf8", marginTop: "4px", fontWeight: 600, textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}>
+                      Active Transition: <span style={{ color: "#c084fc", textTransform: "uppercase" }}>{activeClip?.transition || "cut"}</span>
                     </div>
                   </div>
 
-                  <div style={{ textAlign: "center" }}>
+                  {/* Dynamic Subtitle Box & Audio Wave */}
+                  <div style={{ textAlign: "center", zIndex: 10 }}>
                     <div
                       style={{
-                        backgroundColor: "rgba(0,0,0,0.75)",
-                        backdropFilter: "blur(4px)",
+                        backgroundColor: "rgba(0,0,0,0.85)",
+                        backdropFilter: "blur(8px)",
                         color: "#fef08a",
-                        padding: "6px 12px",
-                        borderRadius: "8px",
+                        padding: "8px 14px",
+                        borderRadius: "10px",
                         border: "1px solid rgba(251, 191, 36, 0.4)",
                         fontSize: "12px",
                         fontWeight: 600,
                         display: "inline-block",
+                        maxWidth: "100%",
+                        lineHeight: 1.4,
+                        boxShadow: "0 4px 16px rgba(0,0,0,0.8)",
                       }}
                     >
-                      "Awaken, Unit-01! The sky sanctuary needs your blade!"
+                      "{activeClip?.subtitle || "Awaken, Unit-01! The sky sanctuary needs your blade!"}"
                     </div>
                   </div>
                 </div>
